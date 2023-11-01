@@ -1,0 +1,38 @@
+From a3b9e17628994b43080b8c03b9f665a0e6514cd6 Mon Sep 17 00:00:00 2001
+From: Marek Blaha <mblaha@redhat.com>
+Date: Tue, 11 May 2021 08:29:31 +0200
+Subject: [PATCH] versionlock: Do not exclude locked obsoleters (RhBug:1957280)
+
+The versionlock plugin excludes all obsoleters of locked packages. If
+both versions (obsoleted package and its obsoleter) are locked, this
+leads to the inability to install the obsoleter package. The patch
+protects all locked packages from being excluded as obsoleters.
+
+= changelog =
+msg:           versionlock: Locking obsoleted package does not make the obsoleter unavailable
+type:          bugfix
+resolves:      https://bugzilla.redhat.com/show_bug.cgi?id=1957280
+---
+ plugins/versionlock.py | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/plugins/versionlock.py b/plugins/versionlock.py
+index d997130..c89a75d 100644
+--- a/plugins/versionlock.py
++++ b/plugins/versionlock.py
+@@ -113,8 +113,10 @@ class VersionLock(dnf.Plugin):
+             other_versions = all_versions.difference(locked_query)
+             excludes_query = excludes_query.union(other_versions)
+             # exclude also anything that obsoletes the locked versions of packages
+-            excludes_query = excludes_query.union(
+-                self.base.sack.query().filterm(obsoletes=locked_query))
++            obsoletes_query = self.base.sack.query().filterm(obsoletes=locked_query)
++            # leave out obsoleters that are also part of locked versions (otherwise the obsoleter package
++            # would not be installable at all)
++            excludes_query = excludes_query.union(obsoletes_query.difference(locked_query))
+ 
+         excludes_query.filterm(reponame__neq=hawkey.SYSTEM_REPO_NAME)
+         if excludes_query:
+--
+libgit2 1.0.1
+

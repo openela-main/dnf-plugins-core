@@ -1,0 +1,31 @@
+From 5c8f753503be87e5d6237be12eec2330236d78ed Mon Sep 17 00:00:00 2001
+From: Marek Blaha <mblaha@redhat.com>
+Date: Mon, 8 Nov 2021 16:51:56 +0100
+Subject: [PATCH] groups-manager: More benevolent resolving of packages (RhBug:2013633)
+
+= changelog =
+msg: groups-manager uses for matching packages full NEVRA and not only name.
+type: enhancement
+resolves: https://bugzilla.redhat.com/show_bug.cgi?id=2013633
+---
+ plugins/groups_manager.py | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/plugins/groups_manager.py b/plugins/groups_manager.py
+index 382df37..12da183 100644
+--- a/plugins/groups_manager.py
++++ b/plugins/groups_manager.py
+@@ -254,7 +254,9 @@ class GroupsManagerCommand(dnf.cli.Command):
+             # find packages according to specifications from command line
+             packages = set()
+             for pkg_spec in self.opts.packages:
+-                q = self.base.sack.query().filterm(name__glob=pkg_spec).latest()
++                subj = dnf.subject.Subject(pkg_spec)
++                q = subj.get_best_query(self.base.sack, with_nevra=True,
++                                        with_provides=False, with_filenames=False).latest()
+                 if not q:
+                     logger.warning(_("No match for argument: {}").format(pkg_spec))
+                     continue
+--
+libgit2 1.1.0
+

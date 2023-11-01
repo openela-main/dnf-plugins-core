@@ -1,0 +1,42 @@
+From a07db6dcd669eecb27b7ddbf1b85cd842bdcc35b Mon Sep 17 00:00:00 2001
+From: Otto Urpelainen <oturpe@iki.fi>
+Date: Wed, 6 Oct 2021 22:08:54 +0300
+Subject: [PATCH] Silence a deprecation warning in plugins/copr.py
+
+In version 1.6.0, the 'distro' package deprecated linux_distribution().
+This causes a deprecation warning to printed to stdout
+every time the user calls the copr plugin.
+
+In order to avoid the printout
+and to protect against possible removal in the future,
+the function is reimplemented
+using still supported functions from 'distro'.
+
+= changelog =
+msg: [copr] Avoid using deprecated function distro.linux_distribution()
+type: bugfix
+resolves: https://bugzilla.redhat.com/show_bug.cgi?id=2011550
+---
+ plugins/copr.py | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/plugins/copr.py b/plugins/copr.py
+index c216408..9f597dd 100644
+--- a/plugins/copr.py
++++ b/plugins/copr.py
+@@ -38,7 +38,11 @@ import rpm
+ # If that fails, attempt to import the deprecated implementation
+ # from the platform module.
+ try:
+-    from distro import linux_distribution, os_release_attr
++    from distro import name, version, codename, os_release_attr
++
++    # Re-implement distro.linux_distribution() to avoid a deprecation warning
++    def linux_distribution():
++        return (name(), version(), codename())
+ except ImportError:
+     def os_release_attr(_):
+         return ""
+-- 
+2.36.1
+

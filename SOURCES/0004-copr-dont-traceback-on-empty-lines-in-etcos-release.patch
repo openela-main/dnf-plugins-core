@@ -1,0 +1,33 @@
+From ebacba86979d16cdb92ace9d7dc601a85c97b5db Mon Sep 17 00:00:00 2001
+From: Jakub Kadlcik <frostyx@email.cz>
+Date: Tue, 12 Oct 2021 18:30:47 +0200
+Subject: [PATCH] copr: don't traceback on empty lines in /etc/os-release
+
+Fix RHBZ 1994944
+---
+ plugins/copr.py |  9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/plugins/copr.py b/plugins/copr.py
+index 4644495..8841f03 100644
+--- a/plugins/copr.py
++++ b/plugins/copr.py
+@@ -50,8 +50,13 @@ except ImportError:
+             with open('/etc/os-release') as os_release_file:
+                 os_release_data = {}
+                 for line in os_release_file:
+-                    os_release_key, os_release_value = line.rstrip().split('=')
+-                    os_release_data[os_release_key] = os_release_value.strip('"')
++                    try:
++                        os_release_key, os_release_value = line.rstrip().split('=')
++                        os_release_data[os_release_key] = os_release_value.strip('"')
++                    except ValueError:
++                        # Skip empty lines and everything that is not a simple
++                        # variable assignment
++                        pass
+                 return (os_release_data['NAME'], os_release_data['VERSION_ID'], None)
+ 
+ PLUGIN_CONF = 'copr'
+--
+libgit2 1.0.1
+
