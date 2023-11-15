@@ -1,0 +1,33 @@
+From b2d019658ebb40606e1a9efcb2233a8e38834410 Mon Sep 17 00:00:00 2001
+From: Alexander Sosedkin <asosedkin@redhat.com>
+Date: Thu, 7 Oct 2021 19:08:47 +0200
+Subject: [PATCH] copr: allow specifying protocol as part of --hub
+
+This way it doesn't try to connect to
+https://http//url if --hub started with http://.
+---
+ plugins/copr.py | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/plugins/copr.py b/plugins/copr.py
+index 721c010..297210b 100644
+--- a/plugins/copr.py
++++ b/plugins/copr.py
+@@ -198,8 +198,12 @@ class CoprCommand(dnf.cli.Command):
+                     self.copr_hostname += ":" + port
+ 
+         if not self.copr_url:
+-            self.copr_hostname = copr_hub
+-            self.copr_url = self.default_protocol + "://" + copr_hub
++            if '://' not in copr_hub:
++                self.copr_hostname = copr_hub
++                self.copr_url = self.default_protocol + "://" + copr_hub
++            else:
++                self.copr_hostname = copr_hub.split('://', 1)[1]
++                self.copr_url = copr_hub
+ 
+     def _read_config_item(self, config, hub, section, default):
+         try:
+-- 
+2.36.1
+

@@ -1,0 +1,88 @@
+From ee0e1ca0751d29adcc4788334ce8fd74b4d772c9 Mon Sep 17 00:00:00 2001
+From: Marek Blaha <mblaha@redhat.com>
+Date: Wed, 19 May 2021 16:52:57 +0200
+Subject: [PATCH] versionlock: Store full NEVRA
+
+---
+ plugins/versionlock.py | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/plugins/versionlock.py b/plugins/versionlock.py
+index 77b7f91..8a3994e 100644
+--- a/plugins/versionlock.py
++++ b/plugins/versionlock.py
+@@ -312,5 +312,4 @@ def _match(ent, patterns):
+ 
+ def pkgtup2spec(name, arch, epoch, version, release):
+     # we ignore arch
+-    e = "" if epoch in (None, "") else "%s:" % epoch
+-    return "%s-%s%s-%s.*" % (name, e, version, release)
++    return "%s-%s:%s-%s.*" % (name, epoch or "0", version, release)
+-- 
+2.40.1
+
+
+From da25d50a8753b0a648a2653e2fb9e33eb372f73f Mon Sep 17 00:00:00 2001
+From: Marek Blaha <mblaha@redhat.com>
+Date: Wed, 19 May 2021 16:53:37 +0200
+Subject: [PATCH] versionlock: Use only the most specific NEVRA (RhBug:1961217)
+
+When matching patterns from versionlock.list file accept only the most
+specific possible NEVRA.
+The problem with current implementation (using of all possible variants)
+is following (also see the referenced bug):
+
+$ dnf repoquery procps-ng
+procps-ng-0:3.3.17-1.fc34.1.x86_64
+procps-ng-0:3.3.17-1.fc34.x86_64    <-- this one is installed
+
+See the `.1` minorbump part of the release after %{dist} in
+`procps-ng-0:3.3.17-1.fc34.1.x86_64`
+
+$ dnf versionlock procps-ng
+Adding versionlock on: procps-ng-0:3.3.17-1.fc34.*
+
+Now both of the available procps-ng version could be matched by this
+pattern:
+- procps-ng-0:3.3.17-1.fc34.x86_64 (when `*` is considered arch)
+- procps-ng-0:3.3.17-1.fc34.1.x86_64 (when `*` is matched against
+  release part, and arch is considered not present)
+
+That results in versionlock allowing upgrade to a newer version than the
+locked one.
+
+= changelog =
+msg:           Versionlock works correctly with packages with minorbump part of release
+type:          bugfix
+resolves:      https://bugzilla.redhat.com/show_bug.cgi?id=1961217
+---
+ plugins/versionlock.py | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/plugins/versionlock.py b/plugins/versionlock.py
+index 8a3994e..32c51da 100644
+--- a/plugins/versionlock.py
++++ b/plugins/versionlock.py
+@@ -89,7 +89,9 @@ class VersionLock(dnf.Plugin):
+                 pat = pat[1:]
+                 excl = 1
+ 
+-            possible_nevras = dnf.subject.Subject(pat).get_nevra_possibilities()
++            possible_nevras = dnf.subject.Subject(pat).get_nevra_possibilities(
++                forms=[hawkey.FORM_NEVRA, hawkey.FORM_NEVR, hawkey.FORM_NEV,
++                       hawkey.FORM_NA, hawkey.FORM_NAME])
+             if possible_nevras:
+                 count[excl] += 1
+             else:
+@@ -102,6 +104,8 @@ class VersionLock(dnf.Plugin):
+                 else:
+                     locked_names.add(nevra.name)
+                     locked_query = locked_query.union(pat_query)
++                if pat_query:
++                    break
+ 
+         if count[1]:
+             logger.debug(APPLY_EXCLUDE.format(locklist_fn, count[1]))
+-- 
+2.40.1
+

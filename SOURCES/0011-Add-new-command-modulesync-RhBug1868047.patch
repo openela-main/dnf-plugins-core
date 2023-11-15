@@ -1,0 +1,439 @@
+From 6ea94d9c768eb45975f314e11ab9dd88284fa380 Mon Sep 17 00:00:00 2001
+From: Jaroslav Mracek <jmracek@redhat.com>
+Date: Mon, 27 Sep 2021 11:29:01 +0200
+Subject: [PATCH] Add new command modulesync (RhBug:1868047)
+
+It will download module metadata from all enabled repositories,
+module artifacts and profiles of matching modules. Then it creates
+a repository.
+
+= changelog =
+msg:           Add a new subpackage with modulesync command. The command
+downloads packages from modules and/or creates a repository with modular
+data.
+type:          enhancement
+resolves:      https://bugzilla.redhat.com/show_bug.cgi?id=1868047
+---
+ dnf-plugins-core.spec  |  20 ++++++++++++++++++++
+ doc/CMakeLists.txt     |   1 +
+ doc/conf.py            |   1 +
+ doc/index.rst          |   1 +
+ doc/modulesync.rst     | 103 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ plugins/CMakeLists.txt |   1 +
+ plugins/modulesync.py  | 208 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 7 files changed, 335 insertions(+)
+ create mode 100644 doc/modulesync.rst
+ create mode 100644 plugins/modulesync.py
+
+diff --git a/dnf-plugins-core.spec b/dnf-plugins-core.spec
+index cef836f..afdbcbb 100644
+--- a/dnf-plugins-core.spec
++++ b/dnf-plugins-core.spec
+@@ -402,6 +402,19 @@ versions of those packages. This allows you to e.g. protect packages from being
+ updated by newer versions.
+ %endif
+ 
++%if %{with python3}
++%package -n python3-dnf-plugin-modulesync
++Summary:        Download module metadata and packages and create repository
++Requires:       python3-%{name} = %{version}-%{release}
++Requires:       createrepo_c >= 0.17.4
++Provides:       dnf-plugin-modulesync =  %{version}-%{release}
++Provides:       dnf-command(modulesync)
++
++%description -n python3-dnf-plugin-modulesync
++Download module metadata from all enabled repositories, module artifacts and profiles of matching modules and create
++repository.
++%endif
++
+ %prep
+ %autosetup
+ %if %{with python2}
+@@ -762,6 +775,13 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
+ %endif
+ %endif
+ 
++%if %{with python3}
++%files -n python3-dnf-plugin-modulesync
++%{python3_sitelib}/dnf-plugins/modulesync.*
++%{python3_sitelib}/dnf-plugins/__pycache__/modulesync.*
++%{_mandir}/man8/dnf-modulesync.*
++%endif
++
+ %changelog
+ * Mon Apr 12 2021 Nicola Sella <nsella@redhat.com> - 4.0.21-1
+ - Add missing command line option to documentation
+diff --git a/doc/CMakeLists.txt b/doc/CMakeLists.txt
+index 3fb665d..ff84cf8 100644
+--- a/doc/CMakeLists.txt
++++ b/doc/CMakeLists.txt
+@@ -28,6 +28,7 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/dnf-builddep.8
+     ${CMAKE_CURRENT_BINARY_DIR}/dnf-generate_completion_cache.8
+     ${CMAKE_CURRENT_BINARY_DIR}/dnf-groups-manager.8
+     ${CMAKE_CURRENT_BINARY_DIR}/dnf-leaves.8
++    ${CMAKE_CURRENT_BINARY_DIR}/dnf-modulesync.8
+     ${CMAKE_CURRENT_BINARY_DIR}/dnf-needs-restarting.8
+     ${CMAKE_CURRENT_BINARY_DIR}/dnf-repoclosure.8
+     ${CMAKE_CURRENT_BINARY_DIR}/dnf-repodiff.8
+diff --git a/doc/conf.py b/doc/conf.py
+index 645185a..41d6936 100644
+--- a/doc/conf.py
++++ b/doc/conf.py
+@@ -254,6 +254,7 @@ man_pages = [
+     ('groups-manager', 'dnf-groups-manager', u'DNF groups-manager Plugin', AUTHORS, 8),
+     ('leaves', 'dnf-leaves', u'DNF leaves Plugin', AUTHORS, 8),
+     ('local', 'dnf-local', u'DNF local Plugin', AUTHORS, 8),
++    ('modulesync', 'dnf-modulesync', u'DNF modulesync Plugin', AUTHORS, 8),
+     ('needs_restarting', 'dnf-needs-restarting', u'DNF needs_restarting Plugin', AUTHORS, 8),
+     ('repoclosure', 'dnf-repoclosure', u'DNF repoclosure Plugin', AUTHORS, 8),
+     ('repodiff', 'dnf-repodiff', u'DNF repodiff Plugin', AUTHORS, 8),
+diff --git a/doc/index.rst b/doc/index.rst
+index 7213253..07f6052 100644
+--- a/doc/index.rst
++++ b/doc/index.rst
+@@ -37,6 +37,7 @@ This documents core plugins of DNF:
+    leaves
+    local
+    migrate
++   modulesync
+    needs_restarting
+    post-transaction-actions
+    repoclosure
+diff --git a/doc/modulesync.rst b/doc/modulesync.rst
+new file mode 100644
+index 0000000..2837287
+--- /dev/null
++++ b/doc/modulesync.rst
+@@ -0,0 +1,103 @@
++..
++  Copyright (C) 2015  Red Hat, Inc.
++
++  This copyrighted material is made available to anyone wishing to use,
++  modify, copy, or redistribute it subject to the terms and conditions of
++  the GNU General Public License v.2, or (at your option) any later version.
++  This program is distributed in the hope that it will be useful, but WITHOUT
++  ANY WARRANTY expressed or implied, including the implied warranties of
++  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
++  Public License for more details.  You should have received a copy of the
++  GNU General Public License along with this program; if not, write to the
++  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
++  02110-1301, USA.  Any Red Hat trademarks that are incorporated in the
++  source code or documentation are not subject to the GNU General Public
++  License and may only be used or replicated with the express permission of
++  Red Hat, Inc.
++
++====================
++DNF modulesync Plugin
++====================
++
++Download packages from modules and/or create a repository with modular data.
++
++--------
++Synopsis
++--------
++
++``dnf modulesync [options] [<module-spec>...]``
++
++-----------
++Description
++-----------
++
++`modulesync` downloads packages from modules according to provided arguments and creates a repository with modular data
++in working directory. In environment with modules it is recommend to use the command for redistribution of packages,
++because DNF does not allow installation of modular packages without modular metadata on the system (Fail-safe
++mechanism). The command without an argument creates a repository like `createrepo_c` but with modular metadata collected
++from all available repositories.
++
++See examples.
++
++---------
++Arguments
++---------
++
++``<module-spec>``
++    Module specification for the package to download. The argument is an optional.
++
++-------
++Options
++-------
++
++All general DNF options are accepted. Namely, the ``--destdir`` option can be used to specify directory where packages
++will be downloaded and the new repository created. See `Options` in :manpage:`dnf(8)` for details.
++
++
++``-n, --newest-only``
++    Download only packages from the newest modules.
++
++``--enable_source_repos``
++    Enable repositories with source packages
++
++``--enable_debug_repos``
++    Enable repositories with debug-info and debug-source packages
++
++``--resolve``
++    Resolve and download needed dependencies
++
++--------
++Examples
++--------
++
++``dnf modulesync nodejs``
++    Download packages from `nodejs` module and crete a repository with modular metadata in working directory
++
++``dnf download nodejs``
++
++``dnf modulesync``
++    The first `download` command downloads nodejs package into working directory. In environment with modules `nodejs`
++    package can be a modular package therefore when I create a repository I have to insert also modular metadata
++    from available repositories to ensure 100% functionality. Instead of `createrepo_c` use `dnf modulesync`
++    to create a repository in working directory with nodejs package and modular metadata.
++
++``dnf --destdir=/tmp/my-temp modulesync nodejs:14/minimal --resolve``
++    Download package required for installation of `minimal` profile from module `nodejs` and stream `14` into directory
++    `/tmp/my-temp` and all required dependencies. Then it will create a repository in `/tmp/my-temp` directory with
++    previously downloaded packages and modular metadata from all available repositories.
++
++``dnf module install nodejs:14/minimal --downloadonly --destdir=/tmp/my-temp``
++
++``dnf modulesync --destdir=/tmp/my-temp``
++    The first `dnf module install` command downloads package from required for installation of `minimal` profile from module
++    `nodejs` and stream `14` into directory `/tmp/my-temp`. The second command `dnf modulesync` will create
++    a repository in `/tmp/my-temp` directory with previously downloaded packages and modular metadata from all
++    available repositories. In comparison to `dnf --destdir=/tmp/my-temp modulesync nodejs:14/minimal --resolve` it will
++    only download packages required for installation on current system.
++
++
++--------
++See Also
++--------
++
++* :manpage:`dnf(8)`, DNF Command Reference
+diff --git a/plugins/CMakeLists.txt b/plugins/CMakeLists.txt
+index f66d3df..59f148f 100644
+--- a/plugins/CMakeLists.txt
++++ b/plugins/CMakeLists.txt
+@@ -22,6 +22,7 @@ INSTALL (FILES repograph.py DESTINATION ${PYTHON_INSTALL_DIR}/dnf-plugins)
+ INSTALL (FILES repomanage.py DESTINATION ${PYTHON_INSTALL_DIR}/dnf-plugins)
+ INSTALL (FILES reposync.py DESTINATION ${PYTHON_INSTALL_DIR}/dnf-plugins)
+ INSTALL (FILES show_leaves.py DESTINATION ${PYTHON_INSTALL_DIR}/dnf-plugins)
++INSTALL (FILES modulesync.py DESTINATION ${PYTHON_INSTALL_DIR}/dnf-plugins)
+ INSTALL (FILES versionlock.py DESTINATION ${PYTHON_INSTALL_DIR}/dnf-plugins)
+ 
+ ADD_SUBDIRECTORY (dnfpluginscore)
+diff --git a/plugins/modulesync.py b/plugins/modulesync.py
+new file mode 100644
+index 0000000..c1c33e4
+--- /dev/null
++++ b/plugins/modulesync.py
+@@ -0,0 +1,208 @@
++# Copyright (C) 2021  Red Hat, Inc.
++#
++# This copyrighted material is made available to anyone wishing to use,
++# modify, copy, or redistribute it subject to the terms and conditions of
++# the GNU General Public License v.2, or (at your option) any later version.
++# This program is distributed in the hope that it will be useful, but WITHOUT
++# ANY WARRANTY expressed or implied, including the implied warranties of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
++# Public License for more details.  You should have received a copy of the
++# GNU General Public License along with this program; if not, write to the
++# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
++# 02110-1301, USA.  Any Red Hat trademarks that are incorporated in the
++# source code or documentation are not subject to the GNU General Public
++# License and may only be used or replicated with the express permission of
++# Red Hat, Inc.
++#
++
++from __future__ import absolute_import
++from __future__ import unicode_literals
++from dnfpluginscore import _, P_, logger
++from dnf.cli.option_parser import OptionParser
++
++import os
++import shutil
++import subprocess
++
++import dnf
++import dnf.cli
++import dnf.i18n
++import hawkey
++
++
++@dnf.plugin.register_command
++class SyncToolCommand(dnf.cli.Command):
++
++    aliases = ['modulesync']
++    summary = _('Download packages from modules and/or create a repository with modular data')
++
++    def __init__(self, cli):
++        super(SyncToolCommand, self).__init__(cli)
++
++    @staticmethod
++    def set_argparser(parser):
++        parser.add_argument('module', nargs='*', metavar=_('MODULE'),
++                            help=_('modules to download'))
++        parser.add_argument("--enable_source_repos", action='store_true',
++                            help=_('enable repositories with source packages'))
++        parser.add_argument("--enable_debug_repos", action='store_true',
++                            help=_('enable repositories with debug-info and debug-source packages'))
++        parser.add_argument('--resolve', action='store_true',
++                            help=_('resolve and download needed dependencies'))
++        parser.add_argument('-n', '--newest-only', default=False, action='store_true',
++                            help=_('download only packages from newest modules'))
++
++    def configure(self):
++        # setup sack and populate it with enabled repos
++        demands = self.cli.demands
++        demands.sack_activation = True
++        demands.available_repos = True
++
++        demands.load_system_repo = False
++
++        if self.opts.enable_source_repos:
++            self.base.repos.enable_source_repos()
++
++        if self.opts.enable_debug_repos:
++            self.base.repos.enable_debug_repos()
++
++        if self.opts.destdir:
++            self.base.conf.destdir = self.opts.destdir
++        else:
++            self.base.conf.destdir = dnf.i18n.ucd(os.getcwd())
++
++    def run(self):
++        """Execute the util action here."""
++
++        pkgs = self.base.sack.query().filterm(empty=True)
++        no_matched_spec = []
++        for module_spec in self.opts.module:
++            try:
++                pkgs = pkgs.union(self._get_packages_from_modules(module_spec))
++            except dnf.exceptions.Error:
++                no_matched_spec.append(module_spec)
++        if no_matched_spec:
++            msg = P_("Unable to find a match for argument: '{}'", "Unable to find a match for arguments: '{}'",
++                     len(no_matched_spec)).format("' '".join(no_matched_spec))
++            raise dnf.exceptions.Error(msg)
++
++        if self.opts.resolve:
++            pkgs = pkgs.union(self._get_providers_of_requires(pkgs))
++
++        # download rpms
++        self._do_downloads(pkgs)
++
++        # Create a repository at destdir with modular data
++        remove_tmp_moduleyamls_files = []
++        for repo in self.base.repos.iter_enabled():
++            module_md_path = repo.get_metadata_path('modules')
++            if module_md_path:
++                filename = "".join([repo.id, "-", os.path.basename(module_md_path)])
++                dest_path = os.path.join(self.base.conf.destdir, filename)
++                shutil.copy(module_md_path, dest_path)
++                remove_tmp_moduleyamls_files.append(dest_path)
++        args = ["createrepo_c", "--update", "--unique-md-filenames", self.base.conf.destdir]
++        p = subprocess.run(args)
++        if p.returncode:
++            msg = _("Creation of repository failed with return code {}. All downloaded content was kept on the system")
++            msg = msg.format(p.returncode)
++            raise dnf.exceptions.Error(msg)
++        for file_path in remove_tmp_moduleyamls_files:
++            os.remove(file_path)
++
++    def _do_downloads(self, pkgs):
++        """
++        Perform the download for a list of packages
++        """
++        pkg_dict = {}
++        for pkg in pkgs:
++            pkg_dict.setdefault(str(pkg), []).append(pkg)
++
++        to_download = []
++
++        for pkg_list in pkg_dict.values():
++            pkg_list.sort(key=lambda x: (x.repo.priority, x.repo.cost))
++            to_download.append(pkg_list[0])
++        if to_download:
++            self.base.download_packages(to_download, self.base.output.progress)
++
++    def _get_packages_from_modules(self, module_spec):
++        """Gets packages from modules matching module spec
++        1. From module artifacts
++        2. From module profiles"""
++        result_query = self.base.sack.query().filterm(empty=True)
++        module_base = dnf.module.module_base.ModuleBase(self.base)
++        module_list, nsvcap = module_base.get_modules(module_spec)
++        if self.opts.newest_only:
++            module_list = self.base._moduleContainer.getLatestModules(module_list, False)
++        for module in module_list:
++            for artifact in module.getArtifacts():
++                query = self.base.sack.query(flags=hawkey.IGNORE_EXCLUDES).filterm(nevra_strict=artifact)
++                if query:
++                    result_query = result_query.union(query)
++                else:
++                    msg = _("No match for artifact '{0}' from module '{1}'").format(
++                        artifact, module.getFullIdentifier())
++                    logger.warning(msg)
++            if nsvcap.profile:
++                profiles_set = module.getProfiles(nsvcap.profile)
++            else:
++                profiles_set = module.getProfiles()
++            if profiles_set:
++                for profile in profiles_set:
++                    for pkg_name in profile.getContent():
++                        query = self.base.sack.query(flags=hawkey.IGNORE_EXCLUDES).filterm(name=pkg_name)
++                        # Prefer to add modular providers selected by argument
++                        if result_query.intersection(query):
++                            continue
++                        # Add all packages with the same name as profile described
++                        elif query:
++                            result_query = result_query.union(query)
++                        else:
++                            msg = _("No match for package name '{0}' in profile {1} from module {2}")\
++                                .format(pkg_name, profile.getName(), module.getFullIdentifier())
++                            logger.warning(msg)
++        if not module_list:
++            msg = _("No mach for argument '{}'").format(module_spec)
++            raise dnf.exceptions.Error(msg)
++
++        return result_query
++
++    def _get_providers_of_requires(self, to_test, done=None, req_dict=None):
++        done = done if done else to_test
++        # req_dict = {}  {req : set(pkgs)}
++        if req_dict is None:
++            req_dict = {}
++        test_requires = []
++        for pkg in to_test:
++            for require in pkg.requires:
++                if require not in req_dict:
++                    test_requires.append(require)
++                req_dict.setdefault(require, set()).add(pkg)
++
++        if self.opts.newest_only:
++            #  Prepare cache with all packages related affected by modular filtering
++            names = set()
++            for module in self.base._moduleContainer.getModulePackages():
++                for artifact in module.getArtifacts():
++                    name, __, __ = artifact.rsplit("-", 2)
++                    names.add(name)
++            modular_related = self.base.sack.query(flags=hawkey.IGNORE_EXCLUDES).filterm(provides=names)
++
++        requires = self.base.sack.query().filterm(empty=True)
++        for require in test_requires:
++            q = self.base.sack.query(flags=hawkey.IGNORE_EXCLUDES).filterm(provides=require)
++
++            if not q:
++                #  TODO(jmracek) Shell we end with an error or with RC 1?
++                logger.warning((_("Unable to satisfy require {}").format(require)))
++            else:
++                if self.opts.newest_only:
++                    if not modular_related.intersection(q):
++                        q.filterm(latest_per_arch_by_priority=1)
++                requires = requires.union(q.difference(done))
++        done = done.union(requires)
++        if requires:
++            done = self._get_providers_of_requires(requires, done=done, req_dict=req_dict)
++
++        return done
+--
+libgit2 1.1.0
+

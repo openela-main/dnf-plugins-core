@@ -1,0 +1,48 @@
+From e80f79b2f5e17a20065617c0b614b272dd53c57c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Ale=C5=A1=20Mat=C4=9Bj?= <amatej@redhat.com>
+Date: Thu, 26 May 2022 07:21:45 +0200
+Subject: [PATCH] repomanage: Use modules only from repo they are handling
+ (RhBug:2072441)
+
+= changelog =
+msg: [repomanage] Modules are used only when they belong to target repo
+type: bugfix
+resolves: https://bugzilla.redhat.com/show_bug.cgi?id=2072441
+---
+ plugins/repomanage.py | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/plugins/repomanage.py b/plugins/repomanage.py
+index 989bd78..67a6fc7 100644
+--- a/plugins/repomanage.py
++++ b/plugins/repomanage.py
+@@ -66,7 +66,8 @@ class RepoManageCommand(dnf.cli.Command):
+         keepnum = int(self.opts.keep) # the number of items to keep
+ 
+         try:
+-            repo_conf = self.base.repos.add_new_repo("repomanage_repo", self.base.conf, baseurl=[self.opts.path])
++            REPOMANAGE_REPOID = "repomanage_repo"
++            repo_conf = self.base.repos.add_new_repo(REPOMANAGE_REPOID, self.base.conf, baseurl=[self.opts.path])
+             # Always expire the repo, otherwise repomanage could use cached metadata and give identical results
+             # for multiple runs even if the actual repo changed in the meantime
+             repo_conf._repo.expire()
+@@ -78,9 +79,13 @@ class RepoManageCommand(dnf.cli.Command):
+                 module_packages = self.base._moduleContainer.getModulePackages()
+ 
+                 for module_package in module_packages:
+-                    all_modular_artifacts.update(module_package.getArtifacts())
+-                    module_dict.setdefault(module_package.getNameStream(), {}).setdefault(
+-                        module_package.getVersionNum(), []).append(module_package)
++                    # Even though we load only REPOMANAGE_REPOID other modules can be loaded from system
++                    # failsafe data automatically, we don't want them affecting repomanage results so ONLY
++                    # use modules from REPOMANAGE_REPOID.
++                    if module_package.getRepoID() == REPOMANAGE_REPOID:
++                        all_modular_artifacts.update(module_package.getArtifacts())
++                        module_dict.setdefault(module_package.getNameStream(), {}).setdefault(
++                            module_package.getVersionNum(), []).append(module_package)
+ 
+         except dnf.exceptions.RepoError:
+             rpm_list = []
+-- 
+2.36.1
+

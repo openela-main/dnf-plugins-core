@@ -1,0 +1,29 @@
+From 7f9d6809f7cb9ac48f11ef02a4e7c0cadeef9594 Mon Sep 17 00:00:00 2001
+From: Silvie Chlupova <sisi.chlupova@gmail.com>
+Date: Wed, 22 Sep 2021 22:35:21 +0200
+Subject: [PATCH] Fix baseurl for centos stream chroot
+
+= changelog =
+msg: dnf copr enable on CentOS Stream should enable centos stream chroot, not epel 8
+type: bugfix
+resolves: https://bugzilla.redhat.com/show_bug.cgi?id=1994154
+---
+ plugins/copr.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/plugins/copr.py b/plugins/copr.py
+index e1e7018..c216408 100644
+--- a/plugins/copr.py
++++ b/plugins/copr.py
+@@ -457,6 +457,8 @@ Bugzilla. In case of problems, contact the owner of this repository.
+                 chroot = ("opensuse-tumbleweed-{}".format(distarch))
+             else:
+                 chroot = ("opensuse-leap-{0}-{1}".format(dist[1], distarch))
++        elif "CentOS Stream" in dist:
++            chroot = ("centos-stream-{0}-{1}".format(dist[1], distarch))
+         else:
+             chroot = ("epel-%s-x86_64" % dist[1].split(".", 1)[0])
+         return chroot
+-- 
+2.36.1
+

@@ -1,0 +1,37 @@
+From 4b0001d0f13598369ec2e6a800af519e8c3a334c Mon Sep 17 00:00:00 2001
+From: Carl George <carl@george.computer>
+Date: Mon, 27 Jun 2022 23:12:05 -0500
+Subject: [PATCH] copr: Guess EPEL chroots for CentOS Stream (RhBug:2058471)
+
+Packages built in epel-9 chroots are almost always compatible with
+CentOS Stream 9.  Not having the copr plugin guess this chroot is
+causing user friction.  Users are creating epel-9 chroots expecting them
+to work for both CentOS Stream 9 and RHEL 9.  When they get reports
+about `dnf copr enable` not working, they try to add a centos-stream-9
+chroot, only to discover the dependencies they need from EPEL are not
+available.
+
+Instead of making the majority of CentOS Stream users include an
+explicit chroot argument, let's reserve that workaround only for the
+people that don't want their CentOS Stream systems picking the EPEL
+chroot.
+---
+ plugins/copr.py | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/plugins/copr.py b/plugins/copr.py
+index 297210b..16946b7 100644
+--- a/plugins/copr.py
++++ b/plugins/copr.py
+@@ -469,8 +469,6 @@ Bugzilla. In case of problems, contact the owner of this repository.
+                 chroot = ("opensuse-tumbleweed-{}".format(distarch))
+             else:
+                 chroot = ("opensuse-leap-{0}-{1}".format(dist[1], distarch))
+-        elif "CentOS Stream" in dist:
+-            chroot = ("centos-stream-{0}-{1}".format(dist[1], distarch))
+         else:
+             chroot = ("epel-%s-x86_64" % dist[1].split(".", 1)[0])
+         return chroot
+-- 
+2.36.1
+
