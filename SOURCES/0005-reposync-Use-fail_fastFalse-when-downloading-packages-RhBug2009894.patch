@@ -1,0 +1,40 @@
+From b60f27006cdbdd14fb480aa22610fcd32bfe41e5 Mon Sep 17 00:00:00 2001
+From: Marek Blaha <mblaha@redhat.com>
+Date: Wed, 6 Oct 2021 13:40:55 +0200
+Subject: [PATCH] reposync: Use fail_fast=False when downloading packages (RhBug:2009894)
+
+= changelog =
+msg:           Reposync does not stop downloading packages on the first error
+type:          bugfix
+resolves:      https://bugzilla.redhat.com/show_bug.cgi?id=2009894
+---
+ dnf-plugins-core.spec | 2 +-
+ plugins/reposync.py   | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dnf-plugins-core.spec b/dnf-plugins-core.spec
+index 83ae6ae..cef836f 100644
+--- a/dnf-plugins-core.spec
++++ b/dnf-plugins-core.spec
+@@ -1,4 +1,4 @@
+-%{?!dnf_lowest_compatible: %global dnf_lowest_compatible 4.2.22}
++%{?!dnf_lowest_compatible: %global dnf_lowest_compatible 4.9.2}
+ %global dnf_plugins_extra 2.0.0
+ %global hawkey_version 0.46.1
+ %global yum_utils_subpackage_name dnf-utils
+diff --git a/plugins/reposync.py b/plugins/reposync.py
+index 66c76a7..0ff936f 100644
+--- a/plugins/reposync.py
++++ b/plugins/reposync.py
+@@ -303,7 +303,7 @@ class RepoSyncCommand(dnf.cli.Command):
+                                   progress, 0)
+         payloads = [RPMPayloadLocation(pkg, progress, self.pkg_download_path(pkg))
+                     for pkg in pkglist]
+-        base._download_remote_payloads(payloads, drpm, progress, None)
++        base._download_remote_payloads(payloads, drpm, progress, None, False)
+ 
+     def print_urls(self, pkglist):
+         for pkg in pkglist:
+--
+libgit2 1.0.1
+
