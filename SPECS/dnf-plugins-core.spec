@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.0.21
-Release:        19%{?dist}
+Release:        23%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -68,6 +68,11 @@ Patch26:        0026-Add-a-warning-when-using-system-upgrade-on-RHEL.patch
 Patch27:        0027-offline-upgrade-Add-security-filters.patch
 Patch28:        0028-system-upgrade-Show-warning-always-for-a-downstream.patch
 Patch29:        0029-Update-translations.patch
+Patch30:        0030-versionlock-Use-only-most-specif-NEVRA-RhBug-1961217.patch
+Patch31:        0031-Fix-boot-time-derivation-for-systems-with-no-rtc.patch
+Patch32:        0032-Doc-update-for-reposync-RhBug-2132383-2182004.patch
+Patch33:        0033-Add-fix-and-test-assertion-for-no-systemd-unit-exist.patch
+Patch34:        0034-Fix-zlib-reboot-requirement-RhBug-2092033.patch
 
 
 BuildArch:      noarch
@@ -844,6 +849,21 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Tue Jun 27 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.0.21-23
+- Add patch: Fix zlib reboot requirement (RhBug:2092033)
+
+* Wed May 31 2023 Nicola Sella <nsella@redhat.com> - 4.0.21-22
+- Add fix and test assertion for "no systemd unit exists for pid"
+
+* Fri May 19 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.0.21-21
+- Remove patch: "reposync: Implement --safe-write-path option (RhBug:1898089,2203766)" (RhBug:2208444)
+
+* Wed May 17 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.0.21-20
+- versionlock: Use only the most specific NEVRA (RhBug:1961217)
+- Fix boot time derivation for systems with no rtc (RhBug:2166444,2182157)
+- Doc update for reposync (RhBug:2132383,2182004)
+- reposync: Implement --safe-write-path option (RhBug:1898089,2203766)
+
 * Wed Mar 08 2023 Marek Blaha <mblaha@redhat.com> - 4.0.21-19
 - Update translations
 
