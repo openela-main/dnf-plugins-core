@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.3.0
-Release:        5%{?dist}
+Release:        11%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -44,7 +44,12 @@ Patch2:         0002-Add-a-warning-when-using-system-upgrade-on-RHEL.patch
 Patch3:         0003-offline-upgrade-Add-security-filters.patch
 Patch4:         0004-system-upgrade-Show-warning-always-for-a-downstream.patch
 Patch5:         0005-Update-translations.patch
-
+Patch6:         0006-Fix-boot-time-derivation-for-systems-with-no-rtc.patch
+Patch7:         0007-system-upgrade-Add-poweroff-option-to-reboot-subcomm.patch
+Patch8:         0008-Doc-update-for-reposync-RhBug-2132383-2182004.patch
+Patch9:         0009-Add-fix-and-test-assertion-for-no-systemd-unit-exist.patch
+Patch10:        0010-sys-upgrade_Wait_until_upgrade_done_before_poweoff.patch
+Patch11:        0011-Update-translations-RHEL-9.3.patch
 
 BuildArch:      noarch
 BuildRequires:  cmake
@@ -219,7 +224,7 @@ repoquery, reposync, repotrack, repodiff, builddep, config-manager, debug,
 download and yum-groups-manager that use new implementations using DNF.
 %endif
 
-%if 0%{?rhel} == 0 && %{with python2}
+%if %{with python2}
 %package -n python2-dnf-plugin-leaves
 Summary:        Leaves Plugin for DNF
 Requires:       python2-%{name} = %{version}-%{release}
@@ -238,7 +243,7 @@ Leaves Plugin for DNF, Python 2 version. List all installed packages
 not required by any other installed package.
 %endif
 
-%if 0%{?rhel} == 0 && %{with python3}
+%if %{with python3}
 %package -n python3-dnf-plugin-leaves
 Summary:        Leaves Plugin for DNF
 Requires:       python3-%{name} = %{version}-%{release}
@@ -336,7 +341,7 @@ Post transaction actions Plugin for DNF, Python 3 version. Plugin runs actions
 files.
 %endif
 
-%if 0%{?rhel} == 0 && %{with python2}
+%if %{with python2}
 %package -n python2-dnf-plugin-show-leaves
 Summary:        Leaves Plugin for DNF
 Requires:       python2-%{name} = %{version}-%{release}
@@ -357,7 +362,7 @@ packages that are no longer required by any other installed package
 after a transaction.
 %endif
 
-%if 0%{?rhel} == 0 && %{with python3}
+%if %{with python3}
 %package -n python3-dnf-plugin-show-leaves
 Summary:        Show-leaves Plugin for DNF
 Requires:       python3-%{name} = %{version}-%{release}
@@ -687,8 +692,6 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %exclude %{_mandir}/man1/yum-utils.*
 %endif
 
-%if 0%{?rhel} == 0
-
 %if %{with python2}
 %files -n python2-dnf-plugin-leaves
 %{python2_sitelib}/dnf-plugins/leaves.*
@@ -701,18 +704,6 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %{python3_sitelib}/dnf-plugins/__pycache__/leaves.*
 %{_mandir}/man8/dnf-leaves.*
 %endif
-
-%else
-%exclude %{_mandir}/man8/dnf-leaves.*
-%if %{with python2}
-%exclude %{python2_sitelib}/dnf-plugins/leaves.*
-%endif
-%if %{with python3}
-%exclude %{python3_sitelib}/dnf-plugins/leaves.*
-%exclude %{python3_sitelib}/dnf-plugins/__pycache__/leaves.*
-%endif
-%endif
-# endif 0%%{?rhel} == 0
 
 %if 0%{?rhel} == 0 && %{with python2}
 %files -n python2-dnf-plugin-local
@@ -754,8 +745,6 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %{_mandir}/man8/dnf-post-transaction-actions.*
 %endif
 
-%if 0%{?rhel} == 0
-
 %if %{with python2}
 %files -n python2-dnf-plugin-show-leaves
 %{python2_sitelib}/dnf-plugins/show_leaves.*
@@ -768,18 +757,6 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %{python3_sitelib}/dnf-plugins/__pycache__/show_leaves.*
 %{_mandir}/man8/dnf-show-leaves.*
 %endif
-
-%else
-%exclude %{_mandir}/man8/dnf-show-leaves.*
-%if %{with python2}
-%exclude %{python2_sitelib}/dnf-plugins/show_leaves.*
-%endif
-%if %{with python3}
-%exclude %{python3_sitelib}/dnf-plugins/show_leaves.*
-%exclude %{python3_sitelib}/dnf-plugins/__pycache__/show_leaves.*
-%endif
-%endif
-# endif 0%%{?rhel} == 0
 
 %if %{with python2}
 %files -n python2-dnf-plugin-versionlock
@@ -820,6 +797,28 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Fri Sep 08 2023 Marek Blaha <mblaha@redhat.com> - 4.3.0-11
+- Rebuild in correct target
+
+* Thu Sep 07 2023 Marek Blaha <mblaha@redhat.com> - 4.3.0-10
+- Update translations RHEL 9.3
+
+* Mon Jun 26 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.3.0-9
+- system-upgrade: Wait until the upgrade is done before poweroff (RhBug:2214510)
+
+* Wed May 31 2023 Nicola Sella <nsella@redhat.com> - 4.3.0-8
+- Add fix and test assertion for "no systemd unit exists for pid"
+
+* Wed May 17 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.3.0-7
+- Remove patch: "reposync: Implement --safe-write-path option (RhBug:1898089,2203766)" (RhBug:2207946)
+
+* Mon May 15 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.3.0-6
+- Fix boot time derivation for systems with no rtc (RhBug:2166444,2182157)
+- system-upgrade: Add --poweroff option to reboot subcommand (RhBug:2157844)
+- Doc update for reposync (RhBug:2132383,2182004)
+- reposync: Implement --safe-write-path option (RhBug:1898089,2203766)
+- Enable the leaves and show-leaves DNF plugins (RhBug:2134638)
+
 * Wed Mar 15 2023 Marek Blaha <mblaha@redhat.com> - 4.3.0-5
 - Update translations
 
