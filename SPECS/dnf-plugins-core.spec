@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.3.0
-Release:        11%{?dist}
+Release:        13%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -50,6 +50,9 @@ Patch8:         0008-Doc-update-for-reposync-RhBug-2132383-2182004.patch
 Patch9:         0009-Add-fix-and-test-assertion-for-no-systemd-unit-exist.patch
 Patch10:        0010-sys-upgrade_Wait_until_upgrade_done_before_poweoff.patch
 Patch11:        0011-Update-translations-RHEL-9.3.patch
+Patch12:        0012-RHEL-6394-Fix-incorrect-spanish-translation-file.patch
+Patch13:        0013-Fix-for-issue-with-binary-garbage-in-smaps-files.patch
+Patch14:        0014-needs-restarting-Add-microcode_ctl-to-a-reboot-list.patch
 
 BuildArch:      noarch
 BuildRequires:  cmake
@@ -797,6 +800,13 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Mon Jan 15 2024 Petr Pisar <ppisar@redhat.com> - 4.3.0-13
+- Add microcode_ctl to a reboot list (RHEL-4600)
+
+* Wed Oct 25 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.3.0-12
+- Fix incorrect spanish translation file (RHEL-6394)
+- Fix for strange issue with binary garbage in smaps files (RHEL-6420, RhBug:2231923)
+
 * Fri Sep 08 2023 Marek Blaha <mblaha@redhat.com> - 4.3.0-11
 - Rebuild in correct target
 
