@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.0.21
-Release:        23%{?dist}
+Release:        25%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -73,6 +73,8 @@ Patch31:        0031-Fix-boot-time-derivation-for-systems-with-no-rtc.patch
 Patch32:        0032-Doc-update-for-reposync-RhBug-2132383-2182004.patch
 Patch33:        0033-Add-fix-and-test-assertion-for-no-systemd-unit-exist.patch
 Patch34:        0034-Fix-zlib-reboot-requirement-RhBug-2092033.patch
+Patch35:        0035-Fix-for-issue-with-binary-garbage-in-smaps-files.patch
+Patch36:        0036-needs-restarting-Add-microcode_ctl-to-a-reboot-list.patch
 
 
 BuildArch:      noarch
@@ -849,6 +851,12 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Mon Jan 15 2024 Petr Pisar <ppisar@redhat.com> - 4.0.21-25
+- Add microcode_ctl to a reboot list (RHEL-17356)
+
+* Mon Oct 16 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.0.21-24
+- Fix for strange issue with binary garbage in smaps files (RHEL-6392, RhBug:2212953)
+
 * Tue Jun 27 2023 Jaroslav Rohel <jrohel@redhat.com> - 4.0.21-23
 - Add patch: Fix zlib reboot requirement (RhBug:2092033)
 
