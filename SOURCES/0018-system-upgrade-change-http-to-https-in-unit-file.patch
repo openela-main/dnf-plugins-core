@@ -1,0 +1,33 @@
+From 1880f968aa323226a70d058c64ee50c104536b88 Mon Sep 17 00:00:00 2001
+From: Evan Goode <mail@evangoo.de>
+Date: Mon, 10 Jul 2023 13:09:36 +0000
+Subject: [PATCH] system-upgrade: change http to https in unit file
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Upstream commit: 4615b3213659351d9933ac91e595bd236618f649
+Resolves Rhbug:2219233
+Resolves: https://issues.redhat.com/browse/RHEL-13053
+
+Signed-off-by: Petr Písař <ppisar@redhat.com>
+---
+ etc/systemd/dnf-system-upgrade.service | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/etc/systemd/dnf-system-upgrade.service b/etc/systemd/dnf-system-upgrade.service
+index 3e15920..f4f0dac 100644
+--- a/etc/systemd/dnf-system-upgrade.service
++++ b/etc/systemd/dnf-system-upgrade.service
+@@ -1,7 +1,7 @@
+ [Unit]
+ Description=System Upgrade using DNF
+ ConditionPathExists=/system-update
+-Documentation=http://www.freedesktop.org/wiki/Software/systemd/SystemUpdates
++Documentation=https://www.freedesktop.org/wiki/Software/systemd/SystemUpdates
+ 
+ DefaultDependencies=no
+ Requires=sysinit.target
+-- 
+2.45.0
+

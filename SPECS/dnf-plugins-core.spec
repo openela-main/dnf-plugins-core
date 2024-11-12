@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.3.0
-Release:        13%{?dist}
+Release:        16%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -53,6 +53,7 @@ Patch11:        0011-Update-translations-RHEL-9.3.patch
 Patch12:        0012-RHEL-6394-Fix-incorrect-spanish-translation-file.patch
 Patch13:        0013-Fix-for-issue-with-binary-garbage-in-smaps-files.patch
 Patch14:        0014-needs-restarting-Add-microcode_ctl-to-a-reboot-list.patch
+Patch18:        0018-system-upgrade-change-http-to-https-in-unit-file.patch
 
 BuildArch:      noarch
 BuildRequires:  cmake
@@ -800,6 +801,17 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Thu Jun 06 2024 Petr Pisar <ppisar@redhat.com> - 4.3.0-16
+- Revert needs-restarting prefers to obtain a boot time from systemd to deal
+  with RTCs running in local time (RHEL-39775)
+
+* Mon May 20 2024 Petr Pisar <ppisar@redhat.com> - 4.3.0-15
+- Fix a link to dnf-system-upgrade service documentation (RHEL-13053)
+
+* Mon May 06 2024 Petr Pisar <ppisar@redhat.com> - 4.3.0-14
+- needs-restarting prefers to obtain a boot time from systemd to deal with
+  RTCs running in local time (RHEL-14900)
+
 * Mon Jan 15 2024 Petr Pisar <ppisar@redhat.com> - 4.3.0-13
 - Add microcode_ctl to a reboot list (RHEL-4600)
 
