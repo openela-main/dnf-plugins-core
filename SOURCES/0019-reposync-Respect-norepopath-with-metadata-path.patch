@@ -1,0 +1,26 @@
+From 1177f339dc3c428d57aef9ec6ae5d1db09ff7b95 Mon Sep 17 00:00:00 2001
+From: Pavla Kratochvilova <pkratoch@redhat.com>
+Date: Wed, 24 Jul 2024 11:05:18 +0200
+Subject: [PATCH] reposync: Respect --norepopath with --metadata-path
+
+Resolves: https://issues.redhat.com/browse/RHEL-40914
+---
+ plugins/reposync.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/plugins/reposync.py b/plugins/reposync.py
+index 0ff936f..ab513e7 100644
+--- a/plugins/reposync.py
++++ b/plugins/reposync.py
+@@ -180,7 +180,7 @@ class RepoSyncCommand(dnf.cli.Command):
+ 
+     def metadata_target(self, repo):
+         if self.opts.metadata_path:
+-            return _pkgdir(self.opts.metadata_path, repo.id)
++            return _pkgdir(self.opts.metadata_path, repo.id if not self.opts.norepopath else '')
+         else:
+             return self.repo_target(repo)
+ 
+-- 
+2.46.2
+

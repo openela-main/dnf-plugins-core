@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.3.0
-Release:        16%{?dist}
+Release:        20%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -54,6 +54,9 @@ Patch12:        0012-RHEL-6394-Fix-incorrect-spanish-translation-file.patch
 Patch13:        0013-Fix-for-issue-with-binary-garbage-in-smaps-files.patch
 Patch14:        0014-needs-restarting-Add-microcode_ctl-to-a-reboot-list.patch
 Patch18:        0018-system-upgrade-change-http-to-https-in-unit-file.patch
+Patch19:        0019-reposync-Respect-norepopath-with-metadata-path.patch
+Patch20:        0020-needs-restarting-Get-boot-time-from-systemd-UnitsLoa.patch
+Patch21:        0021-dnf-copr-enable-on-Asahi-Fedora-Linux-Remix-guesses.patch
 
 BuildArch:      noarch
 BuildRequires:  cmake
@@ -801,6 +804,18 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Mon Dec 16 2024 Jan Kolarik <jkolarik@redhat.com> - 4.3.0-20
+- Add forgotten changelog
+
+* Mon Dec 16 2024 Jan Kolarik <jkolarik@redhat.com> - 4.3.0-19
+- Backport patch: "dnf copr enable" on "Asahi Fedora Linux Remix" guesses (RHEL-56143)
+
+* Thu Nov 21 2024 Evan Goode <egoode@redhat.com> - 4.3.0-18
+- needs-restarting: Get boot time from systemd UnitsLoadStartTimestamp (RHEL-14900)
+
+* Thu Oct 10 2024 Pavla Kratochvilova <pkratoch@redhat.com> - 4.3.0-17
+- reposync: Respect --norepopath with --metadata-path (RHEL-40914)
+
 * Thu Jun 06 2024 Petr Pisar <ppisar@redhat.com> - 4.3.0-16
 - Revert needs-restarting prefers to obtain a boot time from systemd to deal
   with RTCs running in local time (RHEL-39775)

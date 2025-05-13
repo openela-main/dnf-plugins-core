@@ -1,0 +1,45 @@
+From 275b858c8b90f880fe71c99bd07aeb76637a0926 Mon Sep 17 00:00:00 2001
+From: Eric Curtin <ecurtin@redhat.com>
+Date: Wed, 7 Jun 2023 20:04:25 +0100
+Subject: [PATCH] "dnf copr enable" on "Asahi Fedora Linux Remix" guesses
+ epel..x86_64
+
+Resolves https://issues.redhat.com/browse/RHEL-56143.
+
+On Asahi Fedora Linux Remix, this can occur when doing a dnf copr
+enable:
+
+Repository 'epel-37-x86_64' does not exist in project '@asahi/mesa'
+
+There are two bugs here, the code doesn't recongize this as a Fedora
+distro and defaults to x86_64 when in this case it's actually an aarch64
+system.
+---
+ plugins/copr.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/plugins/copr.py b/plugins/copr.py
+index 16946b7..ae4f2e0 100644
+--- a/plugins/copr.py
++++ b/plugins/copr.py
+@@ -444,7 +444,7 @@ Bugzilla. In case of problems, contact the owner of this repository.
+             dist = linux_distribution()
+         # Get distribution architecture
+         distarch = self.base.conf.substitutions['basearch']
+-        if any([name in dist for name in ["Fedora", "Fedora Linux"]]):
++        if "Fedora" in dist[0]:
+             if "Rawhide" in dist:
+                 chroot = ("fedora-rawhide-" + distarch)
+             # workaround for enabling repos in Rawhide when VERSION in os-release
+@@ -470,7 +470,7 @@ Bugzilla. In case of problems, contact the owner of this repository.
+             else:
+                 chroot = ("opensuse-leap-{0}-{1}".format(dist[1], distarch))
+         else:
+-            chroot = ("epel-%s-x86_64" % dist[1].split(".", 1)[0])
++            chroot = ("epel-{}-{}".format(dist[1].split(".", 1)[0], distarch if distarch else "x86_64"))
+         return chroot
+ 
+     def _download_repo(self, project_name, repo_filename):
+-- 
+2.47.1
+
