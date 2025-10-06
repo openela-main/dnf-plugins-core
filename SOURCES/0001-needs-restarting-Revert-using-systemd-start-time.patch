@@ -1,0 +1,88 @@
+From 78a541bff0eb234e77b64c058ef51b0650208c1a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20P=C3=ADsa=C5=99?= <ppisar@redhat.com>
+Date: Thu, 6 Jun 2024 13:11:12 +0200
+Subject: [PATCH] needs-restarting: Revert using systemd start time
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Since commit a0ac8717219a1ec9f466162e87f40afa9aa65284 "dnf
+needs-restarting -s" failed to spot services started withing few
+seconds before updating their RPM package.
+
+The cause was using systemd start time instead of a kernel boot time
+when computing an absolute start time of processes.
+
+This patch removes using the systemd start time until a proper fix is
+found.
+
+https://issues.redhat.com/browse/RHEL-39775
+Signed-off-by: Petr Písař <ppisar@redhat.com>
+---
+ doc/needs_restarting.rst    |  6 +-----
+ plugins/needs_restarting.py | 24 ------------------------
+ 2 files changed, 1 insertion(+), 29 deletions(-)
+
+diff --git a/doc/needs_restarting.rst b/doc/needs_restarting.rst
+index 26f401b..be3cc03 100644
+--- a/doc/needs_restarting.rst
++++ b/doc/needs_restarting.rst
+@@ -36,12 +36,8 @@ Description
+ Note that in most cases a process should survive update of its binary and libraries it is using without requiring to be restarted for proper operation. There are however specific cases when this does not apply. Separately, processes often need to be restarted to reflect security updates.
+ 
+ .. note::
+-   Needs-restarting will try to guess the boot time using three different methods:
++   Needs-restarting will try to guess the boot time using two different methods:
+ 
+-   ``UnitsLoadStartTimestamp``
+-        D-Bus property on ``/org/freedesktop/systemd1``.
+-        Works unless the system was not booted with systemd,
+-        such as in (most) containers.
+    ``st_mtime of /proc/1``
+         Reflects the time the first process was run after booting.
+         This works for all known cases except machines without
+diff --git a/plugins/needs_restarting.py b/plugins/needs_restarting.py
+index 8a41753..86777a2 100644
+--- a/plugins/needs_restarting.py
++++ b/plugins/needs_restarting.py
+@@ -218,11 +218,6 @@ class ProcessStart(object):
+         We have two sources from which to derive the boot time. These values vary
+         depending on containerization, existence of a Real Time Clock, etc.
+         For our purposes we want the latest derived value.
+-        - UnitsLoadStartTimestamp property on /org/freedesktop/systemd1
+-             The start time of the service manager, according to systemd itself.
+-             Seems to be more reliable than UserspaceTimestamp when the RTC is
+-             in local time. Works unless the system was not booted with systemd,
+-             such as in (most) containers.
+         - st_mtime of /proc/1
+              Reflects the time the first process was run after booting
+              This works for all known cases except machines without
+@@ -233,25 +228,6 @@ class ProcessStart(object):
+              Does not work on containers which share their kernel with the
+              host - there the host kernel uptime is returned
+         """
+-        units_load_start_timestamp = None
+-        try:
+-            bus = dbus.SystemBus()
+-            systemd1 = bus.get_object(
+-                'org.freedesktop.systemd1',
+-                '/org/freedesktop/systemd1'
+-            )
+-            props = dbus.Interface(
+-                systemd1,
+-                dbus.PROPERTIES_IFACE
+-            )
+-            units_load_start_timestamp = props.Get(
+-                'org.freedesktop.systemd1.Manager',
+-                'UnitsLoadStartTimestamp'
+-            )
+-            if units_load_start_timestamp != 0:
+-                return int(units_load_start_timestamp / (1000 * 1000))
+-        except dbus.exceptions.DBusException as e:
+-            logger.debug("D-Bus error getting boot time from systemd: {}".format(e))
+ 
+         proc_1_boot_time = int(os.stat('/proc/1').st_mtime)
+         if os.path.isfile('/proc/uptime'):
+-- 
+2.45.2
+

@@ -1,0 +1,75 @@
+From 204ad06c46b3389aff914528bcb4325bab8ef027 Mon Sep 17 00:00:00 2001
+From: Evan Goode <mail@evangoo.de>
+Date: Tue, 24 Sep 2024 21:43:46 +0000
+Subject: [PATCH 1/2] needs-restarting: Add --exclude-services
+
+For consumers of `dnf4 needs-restarting`'s output, it's useful to
+separate the systemd services needing restart vs. the processes not
+managed by systemd that need restarting. This new `dnf4 needs-restarting
+--exclude-services` ONLY prints information about processes NOT managed
+by systemd, and for listing systemd services that need to be restarted,
+the existing `--services` flag can be used.
+
+When both `--services` and `--exclude-services` are passed
+`--exclude-services` is ignored.
+
+For https://issues.redhat.com/browse/RHEL-56137.
+---
+ plugins/needs_restarting.py | 27 +++++++++++++++++++++------
+ 1 file changed, 21 insertions(+), 6 deletions(-)
+
+diff --git a/plugins/needs_restarting.py b/plugins/needs_restarting.py
+index 86777a2..cbb7a81 100644
+--- a/plugins/needs_restarting.py
++++ b/plugins/needs_restarting.py
+@@ -264,6 +264,8 @@ class NeedsRestartingCommand(dnf.cli.Command):
+                                    "(exit code 1) or not (exit code 0)"))
+         parser.add_argument('-s', '--services', action='store_true',
+                             help=_("only report affected systemd services"))
++        parser.add_argument('--exclude-services', action='store_true',
++                            help=_("don't list stale processes that correspond to a systemd service"))
+ 
+     def configure(self):
+         demands = self.cli.demands
+@@ -303,19 +305,32 @@ class NeedsRestartingCommand(dnf.cli.Command):
+                 return None
+ 
+         stale_pids = set()
++        stale_service_names = set()
+         uid = os.geteuid() if self.opts.useronly else None
+         for ofile in list_opened_files(uid):
+             pkg = owning_pkg_fn(ofile.presumed_name)
++            pid = ofile.pid
+             if pkg is None:
+                 continue
+-            if pkg.installtime > process_start(ofile.pid):
+-                stale_pids.add(ofile.pid)
++            if pkg.installtime <= process_start(pid):
++                continue
++            if self.opts.services or self.opts.exclude_services:
++                service_name = get_service_dbus(pid)
++                if service_name is None:
++                    stale_pids.add(pid)
++                else:
++                    stale_service_names.add(service_name)
++                    if not self.opts.exclude_services:
++                        stale_pids.add(pid)
++            else:
++                # If neither --services nor --exclude-services is set, don't
++                # query D-Bus at all.
++                stale_pids.add(pid)
+ 
+         if self.opts.services:
+-            names = set([get_service_dbus(pid) for pid in sorted(stale_pids)])
+-            for name in names:
+-                if name is not None:
+-                    print(name)
++            for stale_service_name in sorted(stale_service_names):
++                print(stale_service_name)
+             return 0
++
+         for pid in sorted(stale_pids):
+             print_cmd(pid)
+-- 
+2.47.1
+
