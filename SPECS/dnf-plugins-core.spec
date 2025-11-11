@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.3.0
-Release:        20%{?dist}
+Release:        23%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -57,6 +57,9 @@ Patch18:        0018-system-upgrade-change-http-to-https-in-unit-file.patch
 Patch19:        0019-reposync-Respect-norepopath-with-metadata-path.patch
 Patch20:        0020-needs-restarting-Get-boot-time-from-systemd-UnitsLoa.patch
 Patch21:        0021-dnf-copr-enable-on-Asahi-Fedora-Linux-Remix-guesses.patch
+Patch22:        0022-reposync-Avoid-multiple-downloads-of-duplicate-packa.patch
+Patch23:        0023-multisig-A-new-plugin-for-verifying-extraordinary-RP.patch
+Patch24:        0024-multisig-Do-not-parse-OpenPGP-keys.patch
 
 BuildArch:      noarch
 BuildRequires:  cmake
@@ -318,6 +321,18 @@ Obsoletes:      python-dnf-plugins-extras-migrate < %{dnf_plugins_extra}
 
 %description -n python2-dnf-plugin-migrate
 Migrate Plugin for DNF, Python 2 version. Migrates history, group and yumdb data from yum to dnf.
+%endif
+
+%if %{with python3}
+%package -n python3-dnf-plugin-multisig
+Summary:        Multisig Plugin for DNF
+Requires:       pqrpm
+Requires:       python3-%{name} = %{version}-%{release}
+Provides:       dnf-plugin-multisig = %{version}-%{release}
+
+%description -n python3-dnf-plugin-multisig
+Multisig Plugin for DNF, Python 3 version. The plugin verifies multiple RPMv6
+signatures on RPMv4 packages by using an external rpmkeys program.
 %endif
 
 %if %{with python2}
@@ -735,6 +750,13 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %exclude %{_mandir}/man8/dnf-migrate.*
 %endif
 
+%if %{with python3}
+%files -n python3-dnf-plugin-multisig
+%{python3_sitelib}/dnf-plugins/multisig.*
+%{python3_sitelib}/dnf-plugins/__pycache__/multisig.*
+%{_mandir}/man8/dnf*-multisig.*
+%endif
+
 %if %{with python2}
 %files -n python2-dnf-plugin-post-transaction-actions
 %config(noreplace) %{_sysconfdir}/dnf/plugins/post-transaction-actions.conf
@@ -804,6 +826,16 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Mon Sep 15 2025 Petr Pisar <ppisar@redhat.com> - 4.3.0-23
+- Fix importing OpenPGPv6 keys (RHEL-114424)
+
+* Wed Jun 25 2025 Petr Pisar <ppisar@redhat.com> - 4.3.0-22
+- Add multisig plugin (RHEL-100157)
+
+* Tue Mar 11 2025 Marek Blaha <mblaha@redhat.com> - 4.3.0-21
+- reposync: Avoid multiple downloads of duplicate packages (RHEL-64320)
+- Fix bogus changelog entry date
+
 * Mon Dec 16 2024 Jan Kolarik <jkolarik@redhat.com> - 4.3.0-20
 - Add forgotten changelog
 
@@ -865,7 +897,7 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 * Thu Jan 05 2023 Nicola Sella <nsella@redhat.com> - 4.3.0-3
 - Remove requirement of python3-distro
 
-* Wed Dec 03 2022 Nicola Sella <nsella@redhat.com> - 4.3.0-2
+* Sat Dec 03 2022 Nicola Sella <nsella@redhat.com> - 4.3.0-2
 - Move system-upgrade plugin to core (RhBug:2054235)
 - offline-upgrade: add support for security filters (RhBug:1939975)
 
