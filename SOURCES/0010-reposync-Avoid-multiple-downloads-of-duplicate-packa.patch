@@ -1,0 +1,40 @@
+From c54f4f151db68f88b411f7d3b625955190a4a232 Mon Sep 17 00:00:00 2001
+From: Marek Blaha <mblaha@redhat.com>
+Date: Mon, 4 Nov 2024 10:35:08 +0100
+Subject: [PATCH] reposync: Avoid multiple downloads of duplicate packages
+
+Download each package only once if it would have been saved to the same
+location. This can occur if the repository metadata contains duplicate
+entries for the same package.
+
+Resolves: https://issues.redhat.com/browse/RHEL-64320
+Resolves: https://issues.redhat.com/browse/RHEL-82849
+Upstream commit: 17e36ed
+---
+ plugins/reposync.py | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/plugins/reposync.py b/plugins/reposync.py
+index 63d8e98..2e23a7e 100644
+--- a/plugins/reposync.py
++++ b/plugins/reposync.py
+@@ -305,7 +305,15 @@ class RepoSyncCommand(dnf.cli.Command):
+             query.filterm(arch='src')
+         elif self.opts.arches:
+             query.filterm(arch=self.opts.arches)
+-        return query
++        # skip packages that would have been downloaded to the same location
++        pkglist = []
++        seen_paths = set()
++        for pkg in query:
++            download_path = self.pkg_download_path(pkg)
++            if download_path not in seen_paths:
++                pkglist.append(pkg)
++                seen_paths.add(download_path)
++        return pkglist
+ 
+     def download_packages(self, pkglist):
+         base = self.base
+-- 
+2.48.1
+

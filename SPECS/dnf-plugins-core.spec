@@ -42,7 +42,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.7.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPL-2.0-or-later
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -56,6 +56,8 @@ Patch6:         0006-needs-restarting-Add-exclude-services.patch
 Patch7:         0007-needs-restarting-Add-exclude-services-to-man-page.patch
 Patch8:         0008-needs-restarting-Get-boot-time-from-systemd-UnitsLoa.patch
 Patch9:         0009-doc-needs-restarting-uses-UnitsLoadStartTimestamp-bo.patch
+Patch10:        0010-reposync-Avoid-multiple-downloads-of-duplicate-packa.patch
+
 BuildArch:      noarch
 BuildRequires:  cmake
 BuildRequires:  gettext
@@ -886,6 +888,9 @@ ln -sf %{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/man1/repotrack.1
 %endif
 
 %changelog
+* Thu Mar 20 2025 Marek Blaha <mblaha@redhat.com> - 4.7.0-9
+- reposync: Avoid multiple downloads of duplicate packages (RHEL-82849)
+
 * Thu Jan 23 2025 Evan Goode <egoode@redhat.com> - 4.7.0-8
 - needs-restarting: Get boot time from systemd UnitsLoadStartTimestamp
   (RHEL-35577)
