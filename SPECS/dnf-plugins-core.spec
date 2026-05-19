@@ -42,7 +42,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.7.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPL-2.0-or-later
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -57,6 +57,7 @@ Patch7:         0007-needs-restarting-Add-exclude-services-to-man-page.patch
 Patch8:         0008-needs-restarting-Get-boot-time-from-systemd-UnitsLoa.patch
 Patch9:         0009-doc-needs-restarting-uses-UnitsLoadStartTimestamp-bo.patch
 Patch10:        0010-reposync-Avoid-multiple-downloads-of-duplicate-packa.patch
+Patch11:        0011-versionlock-Document-that-local-packages-are-not-aff.patch
 
 BuildArch:      noarch
 BuildRequires:  cmake
@@ -888,6 +889,9 @@ ln -sf %{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/man1/repotrack.1
 %endif
 
 %changelog
+* Wed Dec 03 2025 Petr Pisar <ppisar@redhat.com> - 4.7.0-10
+- Document that local packages are not affected by versionlock (RHEL-94828)
+
 * Thu Mar 20 2025 Marek Blaha <mblaha@redhat.com> - 4.7.0-9
 - reposync: Avoid multiple downloads of duplicate packages (RHEL-82849)
 
