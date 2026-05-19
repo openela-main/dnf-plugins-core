@@ -34,7 +34,7 @@
 
 Name:           dnf-plugins-core
 Version:        4.3.0
-Release:        24%{?dist}
+Release:        26%{?dist}
 Summary:        Core Plugins for DNF
 License:        GPLv2+
 URL:            https://github.com/rpm-software-management/dnf-plugins-core
@@ -61,6 +61,8 @@ Patch22:        0022-reposync-Avoid-multiple-downloads-of-duplicate-packa.patch
 Patch23:        0023-multisig-A-new-plugin-for-verifying-extraordinary-RP.patch
 Patch24:        0024-multisig-Do-not-parse-OpenPGP-keys.patch
 Patch25:        0025-multisig-Rename-dnf4-multisig-8-manual-page-to-dnf-m.patch
+Patch26:        0026-versionlock-Document-that-local-packages-are-not-aff.patch
+Patch27:        0027-multisig-Ignore-untrusted-signatures-if-there-is-tru.patch
 
 BuildArch:      noarch
 BuildRequires:  cmake >= 3.14
@@ -827,6 +829,12 @@ ln -sf %{_mandir}/man1/%{yum_utils_subpackage_name}.1.gz %{buildroot}%{_mandir}/
 %endif
 
 %changelog
+* Wed Feb 11 2026 Petr Pisar <ppisar@redhat.com> - 4.3.0-26
+- Multisig: ignore untrusted signatures if there is trusted one (RHEL-145372)
+
+* Tue Dec 02 2025 Petr Pisar <ppisar@redhat.com> - 4.3.0-25
+- Document that local packages are not affected by versionlock (RHEL-94014)
+
 * Fri Oct 03 2025 Petr Pisar <ppisar@redhat.com> - 4.3.0-24
 - Rename dnf4-multisig(8) manual page to dnf-multisig(8) (RHEL-117134)
 

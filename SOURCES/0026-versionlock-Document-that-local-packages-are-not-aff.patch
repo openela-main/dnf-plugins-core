@@ -1,0 +1,36 @@
+From c3ddd35dc52d504b8c2875fccaf2559a02ca1a77 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20P=C3=ADsa=C5=99?= <ppisar@redhat.com>
+Date: Mon, 1 Dec 2025 17:40:46 +0100
+Subject: [PATCH] versionlock: Document that local packages are not affected
+
+Upstream commit: fa966d83e340c5df12942656da0f8c5c66eac556
+
+Local packages are added to a sack after the versionlock plugin logic
+runs, so the plugin cannot exclude them from an installation.
+
+This patch documents this deficiency.
+
+Resolve: #585
+Resolve: https://issues.redhat.com/browse/RHEL-94014
+Resolve: https://issues.redhat.com/browse/RHEL-94828
+---
+ doc/versionlock.rst | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/doc/versionlock.rst b/doc/versionlock.rst
+index 1ac7196..c4a931c 100644
+--- a/doc/versionlock.rst
++++ b/doc/versionlock.rst
+@@ -47,6 +47,9 @@ excludes a package that matches the version exactly.
+ Note the versionlock plugin does not apply any excludes in non-transactional
+ operations like `repoquery`, `list`, `info`, etc.
+ 
++Note that the versionlock plugin only applies to in-repository packages.
++Packages passed on the DNF command line as local files won't be affected.
++
+ --------
+ Synopsis
+ --------
+-- 
+2.52.0
+

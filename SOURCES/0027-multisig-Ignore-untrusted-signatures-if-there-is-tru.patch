@@ -1,0 +1,92 @@
+From d5845419b417241436d5104e352e6891f1a4ceac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20P=C3=ADsa=C5=99?= <ppisar@redhat.com>
+Date: Fri, 30 Jan 2026 17:13:55 +0100
+Subject: [PATCH] multisig: Ignore untrusted signatures if there is trusted one
+
+Ported from dnf commit: 00fef9ad0d761eccf8d86580e031f442af9cd8ef
+
+With RPMv6 signatures, there can be multiple signatures attached to
+a single package. If some signatures are made with an algorithm
+disabled in a system-wide crypto policy (e.g. rsa4096 = "never" in
+/etc/crypto-policies/back-ends/rpm-sequoia.config), but other
+signatures are valid and trusted, so that the package is overall
+correctly signed:
+
+    # /usr/lib/pqrpm/bin/rpmkeys -v -K ./foo-0-1.fc43.noarch.rpm; echo $?
+    ./foo-0-1.fc43.noarch.rpm:
+	Header V4 EdDSA/SHA512 Signature, key ID e2b145f3: OK
+	Header V4 RSA/SHA512 Signature, key ID b5e56945: NOTTRUSTED
+	Header SHA256 digest: OK
+	Header SHA1 digest: OK
+	Payload SHA256 digest: OK
+    0
+
+DNF failed like this:
+
+    [...]
+    Is this ok [y/N]: y
+    Downloading Packages:
+    Running transaction check
+    Transaction check succeeded.
+    Running transaction test
+    Transaction test succeeded.
+    norsa                                                                  1.6 MB/s | 1.6 kB     00:00
+    Importing GPG keys from: /root/repos/norsa/rsa.key
+    Is this ok [y/N]: y
+    Key import failed. Failing package is: foo-0-1.fc43.noarch
+     GPG Keys are configured as: file:///root/repos/norsa/rsa.key, file:///root/repos/norsa/eddsa.key
+    Error: GPG check FAILED
+
+The cause was that an output of pqrpm's "rpmkeys -v -K" tool executed
+indirectly by Multisig plugin was incorrectly parsed in
+_process_rpm_output() function. That function assumed that only one
+signature can exist and reported on any NOTTRUSTED record that the
+package is not trustfully signed.
+
+As a result, the plugin attempted to (re)import all the signing keys. But
+importing a key with the disabled algorithm failed and DNF errored.
+
+This patch fixes parsing the rpmkeys output to ignore all untrusted
+signatures if there is at least one signature trusted.
+
+Resolve: https://issues.redhat.com/browse/RHEL-145372
+---
+ plugins/multisig.py | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/plugins/multisig.py b/plugins/multisig.py
+index f29e41f..b05704c 100644
+--- a/plugins/multisig.py
++++ b/plugins/multisig.py
+@@ -55,7 +55,7 @@ class MultiSig(dnf.Plugin):
+         # last newline.
+         if len(data) < 3 or data[0] != b'-:' or data[-1]:
+             return 2
+-        seen_sig, missing_key, not_trusted, not_signed = False, False, False, False
++        trusted_sig, missing_key, not_trusted, not_signed = False, False, False, False
+         for i in data[1:-1]:
+             if b': BAD' in i:
+                 return 2
+@@ -65,12 +65,16 @@ class MultiSig(dnf.Plugin):
+                 not_trusted = True
+             elif i.endswith(b': NOTFOUND'):
+                 not_signed = True
++            # Some rpmkeys versions print Signature, some signature, accept both.
++            elif i.endswith(b': OK') and b'ignature,' in i:
++                trusted_sig = True
+             elif not i.endswith(b': OK'):
+                 return 2
+-        if not_trusted:
+-            return 3
+-        elif missing_key:
++        if missing_key:
+             return 1
++        elif not trusted_sig and not_trusted:
++            # Do not report untrusted signatures if there is a trusted one
++            return 3
+         elif not_signed:
+             return 4
+         # we still check return code, so this is safe
+-- 
+2.53.0
+
