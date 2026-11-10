@@ -1,0 +1,73 @@
+From 9541ca6bff37c749c9a28834bb9e4c863e678b30 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Ale=C5=A1=20Mat=C4=9Bj?= <amatej@redhat.com>
+Date: Tue, 5 May 2026 19:19:10 +0200
+Subject: [PATCH] reposync: add `--min-buildtime YYYY-MM-DD` filter
+
+---
+ doc/reposync.rst    |  3 +++
+ plugins/reposync.py | 14 ++++++++++++++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/doc/reposync.rst b/doc/reposync.rst
+index bbf714c..bfead12 100644
+--- a/doc/reposync.rst
++++ b/doc/reposync.rst
+@@ -80,6 +80,9 @@ All general DNF options are accepted. Namely, the ``--repoid`` option can be use
+ ``-u, --urls``
+     Just print urls of what would be downloaded, don't download.
+ 
++``--min-buildtime <YYYY-MM-DD>``
++    Download only packages with buildtime newer than YYYY-MM-DD.
++    Note that this option may result in partially synchronized repositories and the missing packages can cause dependency issues.
+ 
+ --------
+ Examples
+diff --git a/plugins/reposync.py b/plugins/reposync.py
+index 19f5440..19613be 100644
+--- a/plugins/reposync.py
++++ b/plugins/reposync.py
+@@ -25,6 +25,8 @@ import hawkey
+ import os
+ import shutil
+ import types
++import argparse
++from datetime import date, datetime
+ 
+ from dnfpluginscore import _, logger
+ from dnf.cli.option_parser import OptionParser
+@@ -36,6 +38,12 @@ def _pkgdir(intermediate, target):
+     cwd = dnf.i18n.ucd(os.getcwd())
+     return os.path.realpath(os.path.join(cwd, intermediate, target))
+ 
++def _valid_date(s: str) -> datetime:
++    try:
++        return datetime.strptime(s, "%Y-%m-%d")
++    except ValueError:
++        raise argparse.ArgumentTypeError(f"invalid date: {s!r}")
++
+ 
+ class RPMPayloadLocation(dnf.repo.RPMPayload):
+     def __init__(self, pkg, progress, pkg_location):
+@@ -88,6 +96,8 @@ class RepoSyncCommand(dnf.cli.Command):
+         parser.add_argument('-u', '--urls', default=False, action='store_true',
+                             help=_("Just list urls of what would be downloaded, "
+                                    "don't download"))
++        parser.add_argument('--min-buildtime', default=None, dest='min_buildtime', metavar='YYYY-MM-DD',
++                            type=_valid_date, help=_("download only packages with buildtime newer than YYYY-MM-DD"))
+ 
+     def configure(self):
+         demands = self.cli.demands
+@@ -288,6 +298,10 @@ class RepoSyncCommand(dnf.cli.Command):
+             reponame=repo.id)
+         if self.opts.newest_only:
+             query = self._get_latest(query)
++        if self.opts.min_buildtime:
++            # recent filter takes number of days
++            days_diff = (date.today() - self.opts.min_buildtime.date()).days
++            query = query._recent(days_diff)
+         if self.opts.source:
+             query.filterm(arch='src')
+         elif self.opts.arches:
+-- 
+2.55.0
+
